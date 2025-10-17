@@ -9,7 +9,7 @@ export default function Index() {
     <View style={globalStyles.container}>
       <Text style={globalStyles.title}>O que você deseja?</Text>
 
-      <Link href="/cadastroUser" asChild>
+      <Link href="/loginUser" asChild>
       <TouchableOpacity style={globalStyles.button}>
         <Text style={globalStyles.buttonText}> Buscar produtos</Text>
       </TouchableOpacity>
@@ -17,9 +17,11 @@ export default function Index() {
 
       <Text style={{ marginVertical: 10 }}>ou</Text>
 
+      <Link href="/loginVend" asChild>
       <TouchableOpacity style={globalStyles.button2}>
         <Text style={globalStyles.buttonText2}>Anunciar produtos</Text>
       </TouchableOpacity>
+      </Link>
 
        <Image 
         source={ImagemApp} 

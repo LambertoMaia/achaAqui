@@ -1,4 +1,4 @@
-// CadastroUser.tsx
+// CadastroVend.tsx
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -17,10 +17,9 @@ import {
 import IconeBuscar from "./assets/icons/Vector.png";
 import { cadastroStyles } from "./styles/cadastro";
 
-// Serviço de auth (tenta backend, fallback local em dev)
-import { register } from "./services/authService";
+import { register } from "./services/authService"; // caminho: ajuste se necessário
 
-export default function CadastroUser(): JSX.Element {
+export default function CadastroVend() {
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -38,17 +37,12 @@ export default function CadastroUser(): JSX.Element {
 
   const [loading, setLoading] = useState(false);
 
-  // formata CEP enquanto digita (00000-000)
   const handleCepChange = (text: string) => {
     const digits = text.replace(/\D/g, "").slice(0, 8);
-    if (digits.length > 5) {
-      setCep(digits.slice(0, 5) + "-" + digits.slice(5));
-    } else {
-      setCep(digits);
-    }
+    if (digits.length > 5) setCep(digits.slice(0, 5) + "-" + digits.slice(5));
+    else setCep(digits);
   };
 
-  // validações simples
   const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   const validateCep = (value: string) => /^\d{5}-\d{3}$/.test(value);
   const validateSenha = (value: string) => value.length >= 6;
@@ -60,7 +54,6 @@ export default function CadastroUser(): JSX.Element {
   const isSenhaValid = validateSenha(senha);
 
   const canSubmit = isNomeValid && isCepValid && isEmailValid && isSenhaValid && consentLgpd && !loading;
-
   const showFieldError = (fieldTouched: boolean, valid: boolean) => fieldTouched && !valid;
 
   const lgpdText = useMemo(
@@ -82,32 +75,32 @@ export default function CadastroUser(): JSX.Element {
       return;
     }
 
+    // fecha teclado e inicia loading
     Keyboard.dismiss();
     setLoading(true);
 
-    const payload = {
-      nome: nome.trim(),
-      email: email.trim().toLowerCase(),
-      senha,
-      cep,
-    };
-
     try {
-      // register tenta o backend e, em dev, pode usar fallback local
+      const payload = {
+        nome: nome.trim(),
+        email: email.trim().toLowerCase(),
+        senha,
+        cep,
+      };
+      // register tenta backend -> se offline usa fallback local (dev)
       const resp = await register(payload, true);
-      // resp = { token, user }
-      Alert.alert("Cadastro concluído", `Bem-vindo(a), ${resp.user.nome ?? "usuário"}!`, [
+      // resp => { token, user }
+      Alert.alert("Cadastro concluído", `Bem-vindo(a), ${resp.user.nome}!`, [
         {
           text: "OK",
           onPress: () => {
-            router.replace("/home");
+            // redireciona vendedor para perfil
+            router.replace("/perfilVendedor");
           },
         },
       ]);
     } catch (err: any) {
-      console.warn("Erro ao cadastrar user:", err);
-      const msg = String(err?.message ?? err);
-      Alert.alert("Erro no cadastro", msg || "Ocorreu um erro ao realizar o cadastro.");
+      console.warn("Erro ao cadastrar vendedor:", err);
+      Alert.alert("Erro no cadastro", String(err.message ?? "Ocorreu um erro."));
     } finally {
       setLoading(false);
     }
@@ -154,7 +147,7 @@ export default function CadastroUser(): JSX.Element {
         </View>
         {showFieldError(touched.cep, isCepValid) && <Text style={localStyles.errorText}>CEP inválido. Formato: 00000-000</Text>}
 
-        {/* E-mail */}
+        {/* Email */}
         <View style={localStyles.inputWrapper}>
           <MaterialIcons name="email" size={20} color="#666" style={localStyles.inputIcon} />
           <TextInput
@@ -187,26 +180,21 @@ export default function CadastroUser(): JSX.Element {
         </View>
         {showFieldError(touched.senha, isSenhaValid) && <Text style={localStyles.errorText}>Senha muito curta.</Text>}
 
-        {/* LGPD consent checkbox */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setConsentLgpd((v) => !v)}
-          style={localStyles.consentRow}
-        >
+        {/* LGPD */}
+        <TouchableOpacity activeOpacity={0.8} onPress={() => setConsentLgpd((v) => !v)} style={localStyles.consentRow}>
           <View style={[localStyles.checkbox, consentLgpd ? localStyles.checkboxChecked : null]}>
             {consentLgpd && <Text style={localStyles.checkboxTick}>✓</Text>}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={localStyles.lgpdTitle}>Autorizo o tratamento dos meus dados (LGPD)</Text>
-            <Text style={localStyles.lgpdText} numberOfLines={3}>
-              {lgpdText}
-            </Text>
+            <Text style={localStyles.lgpdText} numberOfLines={3}>{lgpdText}</Text>
             <TouchableOpacity onPress={() => router.push("/politica")}>
               <Text style={localStyles.linkText}>Ler política de privacidade</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
 
+        {/* Botão cadastrar */}
         <TouchableOpacity
           style={[cadastroStyles.button, !canSubmit ? { opacity: 0.5 } : null]}
           disabled={!canSubmit}
@@ -229,61 +217,14 @@ const localStyles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 8,
   },
-  inputIcon: {
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    height: 40,
-    textAlignVertical: "center",
-    paddingVertical: 0,
-    color: "#000",
-  },
-  errorText: {
-    color: "#ff3333",
-    marginBottom: 8,
-    marginLeft: 6,
-  },
-  consentRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginVertical: 10,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: "#ddd",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    marginTop: 2,
-  },
-  checkboxChecked: {
-    borderColor: "#EA3F24",
-    backgroundColor: "#EA3F24",
-  },
-  checkboxTick: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  lgpdTitle: {
-    color: "#e4e4e4ff",
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  lgpdText: {
-    color: "#d4d4d4ff",
-    fontSize: 10,
-    marginBottom: 4,
-  },
-  linkText: {
-    color: "#EA3F24",
-    textDecorationLine: "underline",
-    fontSize: 12,
-    marginTop: 2,
-  },
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, height: 40, textAlignVertical: "center", paddingVertical: 0, color: "#000" },
+  errorText: { color: "#ff3333", marginBottom: 8, marginLeft: 6 },
+  consentRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginVertical: 10 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: "#ddd", justifyContent: "center", alignItems: "center", backgroundColor: "#fff", marginTop: 2 },
+  checkboxChecked: { borderColor: "#EA3F24", backgroundColor: "#EA3F24" },
+  checkboxTick: { color: "#fff", fontWeight: "700" },
+  lgpdTitle: { color: "#e4e4e4ff", fontSize: 12, fontWeight: "700", marginBottom: 4 },
+  lgpdText: { color: "#d4d4d4ff", fontSize: 10, marginBottom: 4 },
+  linkText: { color: "#EA3F24", textDecorationLine: "underline", fontSize: 12, marginTop: 2 },
 });

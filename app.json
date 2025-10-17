@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "meuApp",
-    "slug": "meuApp",
+    "name": "",
+    "slug": "Acha-Aqui",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/logo.jpg",
     "scheme": "meuapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
