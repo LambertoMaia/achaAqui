@@ -26,9 +26,7 @@ export default function Index() {
        <Image 
         source={ImagemApp} 
         style={globalStyles.logo} 
-      />
-      
+      />      
     </View>
   );
 }
-

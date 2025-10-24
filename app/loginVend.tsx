@@ -14,10 +14,10 @@ import {
   View,
 } from "react-native";
 import IconeBuscar from "./assets/icons/Vector.png";
+import apiRequest from "./services/apiService";
 import { cadastroStyles } from "./styles/cadastro";
 
 // IMPORT: usa o mesmo authService criado anteriormente
-import { login } from "./services/authService";
 
 export default function LoginVend() {
   const router = useRouter();
@@ -41,21 +41,32 @@ export default function LoginVend() {
     if (!canSubmit) return;
 
     setLoading(true);
-    try {
-      // chama authService.login (backend primeiro, fallback local se configurado)
-      const resp = await login({ email: email.trim().toLowerCase(), senha });
-      // resp => { token, user }
-      // Se quiser distinguir vendedor/cliente, backend deve retornar role no resp.user
-      Alert.alert("Login bem-sucedido", `Bem-vindo(a), ${resp.user.nome ?? "vendedor"}!`, [
-        { text: "OK", onPress: () => router.replace("/home") },
-      ]);
-    } catch (err: any) {
-      console.warn("loginVend error:", err);
-      Alert.alert("Erro ao autenticar", String(err.message ?? err));
-    } finally {
-      setLoading(false);
+
+    const loginOperation = async () => {
+      try {
+        const response = await apiRequest("POST", { email: email.trim().toLowerCase(), senha, vendedor: 1 }, "api/users/login");
+    
+        console.log(response);
+        if (!response.success) {
+          Alert.alert("Error ao autenticar", response.message);
+          setLoading(false);
+          return;
+        }
+
+        Alert.alert("Login bem-sucedido", `Bem Vindo(a)!`, [
+          { text: "OK", onPress: () => router.replace("/home") },
+        ]);
+        
+      } catch (err: any) {
+        console.warn("loginVend error:", err);
+        Alert.alert("Erro ao autenticar", String(err.message ?? err));
+      } finally {
+        setLoading(false);
+      } 
     }
+    loginOperation();
   };
+
 
   return (
     <LinearGradient

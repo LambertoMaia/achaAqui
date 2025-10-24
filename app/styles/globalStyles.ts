@@ -50,3 +50,5 @@ export const globalStyles = StyleSheet.create({
     marginBottom: 20, // distância do texto
   }
 });
+
+export default { globalStyles }

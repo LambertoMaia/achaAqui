@@ -29,3 +29,5 @@ export const cadastroStyles = StyleSheet.create({
     fontWeight: "bold",
   },
 });
+
+export default { cadastroStyles }

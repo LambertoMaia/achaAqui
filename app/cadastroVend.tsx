@@ -15,9 +15,9 @@ import {
   View,
 } from "react-native";
 import IconeBuscar from "./assets/icons/Vector.png";
+import apiRequest from "./services/apiService";
 import { cadastroStyles } from "./styles/cadastro";
 
-import { register } from "./services/authService"; // caminho: ajuste se necessário
 
 export default function CadastroVend() {
   const router = useRouter();
@@ -79,31 +79,39 @@ export default function CadastroVend() {
     Keyboard.dismiss();
     setLoading(true);
 
-    try {
-      const payload = {
-        nome: nome.trim(),
-        email: email.trim().toLowerCase(),
-        senha,
-        cep,
-      };
-      // register tenta backend -> se offline usa fallback local (dev)
-      const resp = await register(payload, true);
-      // resp => { token, user }
-      Alert.alert("Cadastro concluído", `Bem-vindo(a), ${resp.user.nome}!`, [
-        {
-          text: "OK",
-          onPress: () => {
-            // redireciona vendedor para perfil
-            router.replace("/perfilVendedor");
+    const cadastroVendOperation = async () => {
+      try {
+        const payload = {
+          nome: nome.trim(),
+          email: email.trim().toLowerCase(),
+          senha,
+          cep,
+          vendedor: 1
+        };
+
+        console.log(payload);
+        const response = await apiRequest("POST", payload, "api/users");
+              
+        if (!response.success) {
+          Alert.alert("Erro no cadastro", response.message);
+          return;
+        }
+
+        Alert.alert("Cadastro concluído", `Bem-vindo(a), ${payload.nome}!`, [
+          {
+            text: "OK",
+            onPress: () => {
+              //router.replace("/loginVend");
+            },
           },
-        },
-      ]);
-    } catch (err: any) {
-      console.warn("Erro ao cadastrar vendedor:", err);
-      Alert.alert("Erro no cadastro", String(err.message ?? "Ocorreu um erro."));
-    } finally {
-      setLoading(false);
+        ]);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setLoading(false);
+      }
     }
+    cadastroVendOperation()
   };
 
   return (
@@ -188,7 +196,7 @@ export default function CadastroVend() {
           <View style={{ flex: 1 }}>
             <Text style={localStyles.lgpdTitle}>Autorizo o tratamento dos meus dados (LGPD)</Text>
             <Text style={localStyles.lgpdText} numberOfLines={3}>{lgpdText}</Text>
-            <TouchableOpacity onPress={() => router.push("/politica")}>
+            <TouchableOpacity onPress={() => router.push("/cadastroVend")}>
               <Text style={localStyles.linkText}>Ler política de privacidade</Text>
             </TouchableOpacity>
           </View>

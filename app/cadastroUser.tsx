@@ -15,12 +15,14 @@ import {
   View,
 } from "react-native";
 import IconeBuscar from "./assets/icons/Vector.png";
+import apiRequest from "./services/apiService";
 import { cadastroStyles } from "./styles/cadastro";
 
 // Serviço de auth (tenta backend, fallback local em dev)
-import { register } from "./services/authService";
+//import { register } from "./services/authService";
 
-export default function CadastroUser(): JSX.Element {
+
+export default function CadastroUser() {
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -85,32 +87,60 @@ export default function CadastroUser(): JSX.Element {
     Keyboard.dismiss();
     setLoading(true);
 
-    const payload = {
-      nome: nome.trim(),
-      email: email.trim().toLowerCase(),
-      senha,
-      cep,
-    };
+    const cadastroOperation = async () => {
+      const payload = {
+        nome: nome.trim(),
+        email: email.trim().toLowerCase(),
+        senha,
+        cep,
+      };
 
-    try {
-      // register tenta o backend e, em dev, pode usar fallback local
-      const resp = await register(payload, true);
-      // resp = { token, user }
-      Alert.alert("Cadastro concluído", `Bem-vindo(a), ${resp.user.nome ?? "usuário"}!`, [
-        {
-          text: "OK",
-          onPress: () => {
-            router.replace("/home");
+      try {
+        const response = await apiRequest("POST", payload, "api/users");
+      
+        if (!response.data.success) {
+          Alert.alert("Erro no cadastro", response.data.message);
+          return;
+        }
+
+        Alert.alert("Cadastro concluído", `Bem-vindo(a), ${payload.nome}!`, [
+          {
+            text: "OK",
+            onPress: () => {
+              router.replace("/loginUser");
+            },
           },
-        },
-      ]);
-    } catch (err: any) {
-      console.warn("Erro ao cadastrar user:", err);
-      const msg = String(err?.message ?? err);
-      Alert.alert("Erro no cadastro", msg || "Ocorreu um erro ao realizar o cadastro.");
-    } finally {
-      setLoading(false);
+        ]);
+
+
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setLoading(false);
+      }
+
+
+    // try {
+    //   // register tenta o backend e, em dev, pode usar fallback local
+    //   const resp = await register(payload, true);
+    //   // resp = { token, user }
+    //   Alert.alert("Cadastro concluído", `Bem-vindo(a), ${resp.user.nome ?? "usuário"}!`, [
+    //     {
+    //       text: "OK",
+    //       onPress: () => {
+    //         router.replace("/home");
+    //       },
+    //     },
+    //   ]);
+    // } catch (err: any) {
+    //   console.warn("Erro ao cadastrar user:", err);
+    //   const msg = String(err?.message ?? err);
+    //   Alert.alert("Erro no cadastro", msg || "Ocorreu um erro ao realizar o cadastro.");
+    // } finally {
+    //   setLoading(false);
+    // }
     }
+    cadastroOperation()
   };
 
   return (
@@ -201,7 +231,7 @@ export default function CadastroUser(): JSX.Element {
             <Text style={localStyles.lgpdText} numberOfLines={3}>
               {lgpdText}
             </Text>
-            <TouchableOpacity onPress={() => router.push("/politica")}>
+            <TouchableOpacity onPress={() => router.push("/cadastroUser")}>
               <Text style={localStyles.linkText}>Ler política de privacidade</Text>
             </TouchableOpacity>
           </View>

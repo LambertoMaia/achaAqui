@@ -200,5 +200,5 @@ export async function register(payload: RegisterRequest, fallbackDev = true): Pr
 }
 
 /* ====== EXPORT DEFAULT (opcional) ====== */
-// export default { login, register, persistAuth, clearAuth, getPersistedAuth };
+export default { login, register, persistAuth, clearAuth, getPersistedAuth };
 

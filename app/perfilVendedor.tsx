@@ -1,8 +1,9 @@
 // perfilVendedor.tsx (atualizado para contar produtos do usuário)
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -11,47 +12,132 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import apiRequest from "./services/apiService";
 
 const STORAGE_USER_KEY = "@my_app_user_v1";
 const STORAGE_KEY_PRODUCTS_PREFIX = "@my_app_products_v1:";
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function PerfilVendedor() {
-  const [user, setUser] = useState<{ nome?: string; email?: string } | null>(null);
+  const [user, setUser] = useState<{ nome?: string; email?: string; id?: string } | null>(null);
   const [rating, setRating] = useState<number>(0); // 0..5
   const [followers, setFollowers] = useState<number>(0);
   const [productsCount, setProductsCount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
+
+  const updateProductsCount = async (userEmail?: string) => {
+    try {
+      const email = userEmail || (user?.email ? String(user.email).toLowerCase() : null);
+      if (email) {
+        const rawProducts = await AsyncStorage.getItem(`${STORAGE_KEY_PRODUCTS_PREFIX}${email}`);
+        const arr = rawProducts ? JSON.parse(rawProducts) : [];
+        const count = Array.isArray(arr) ? arr.length : 0;
+        setProductsCount(count);
+        console.log(`Updated products count: ${count} for email: ${email}`);
+      } else {
+        setProductsCount(0);
+      }
+    } catch (error) {
+      console.warn("Error updating products count:", error);
+      setProductsCount(0);
+    }
+  };
 
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_USER_KEY);
-        const usr = raw ? JSON.parse(raw) : null;
-        setUser(usr);
+        var lastUserResponse = await apiRequest('GET', {}, 'api/users/last');
+        var lastUserResponseData = lastUserResponse.data;
+        
+        if (lastUserResponseData.success && lastUserResponseData.data?.last_user_id) {
+          const userId = lastUserResponseData.data.last_user_id;
+          const userEmail = lastUserResponseData.data.last_user_logged;
+          
+          var userResponse = await apiRequest('GET', {}, `api/users/${userId}`);
+          var userResponseData = userResponse.data;
+          
+          if (userResponseData.success && userResponseData.data && Array.isArray(userResponseData.data) && userResponseData.data.length > 0) {
+            const userFromApiData = userResponseData.data[0]; // Get first user from array
+            const userData = {
+              nome: userFromApiData.nome || 'Usuário',
+              email: userResponseData.data.email || userEmail,
+              id: userId,
+              cep: userResponseData.data.cep,
+              vendedor: userResponseData.data.vendedor === 1
+            };
+            setUser(userData);
+            
+            const email = userResponseData.data.email?.toLowerCase();
+            if (email) {
+              await updateProductsCount(email);
+            }
 
-        const email = usr?.email ? String(usr.email).toLowerCase() : null;
-        if (email) {
-          const rawProducts = await AsyncStorage.getItem(`${STORAGE_KEY_PRODUCTS_PREFIX}${email}`);
-          const arr = rawProducts ? JSON.parse(rawProducts) : [];
-          setProductsCount(Array.isArray(arr) ? arr.length : 0);
+            await AsyncStorage.setItem(STORAGE_USER_KEY, JSON.stringify(userData));
+          }
         } else {
-          setProductsCount(0);
+          if (lastUserResponseData.data.last_user_logged) {
+            const userData = {
+              email: lastUserResponseData.data.last_user_logged,
+              nome: 'Usuário',
+              id: lastUserResponseData.data.last_user_id
+            };
+            setUser(userData);
+            await AsyncStorage.setItem(STORAGE_USER_KEY, JSON.stringify(userData));
+          } else {
+            const raw = await AsyncStorage.getItem(STORAGE_USER_KEY);
+            const usr = raw ? JSON.parse(raw) : null;
+            setUser(usr);
+          }
+          
+          const email = lastUserResponseData.data.last_user_logged || (user?.email ? String(user.email).toLowerCase() : null);
+          if (email) {
+            await updateProductsCount(email);
+          } else {
+            setProductsCount(0);
+          }
         }
 
         // se tiver followers/ratings salvos também, carregar aqui (ex.: key separada)
         // setFollowers(...) / setRating(...)
       } catch (err) {
         console.warn("Erro ao carregar perfil:", err);
+      } finally {
+        setLoading(false);
       }
     };
     loadAll();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.email) {
+        updateProductsCount(user.email);
+      }
+    }, [user?.email])
+  );
+
   const handleLogout = async () => {
-    await AsyncStorage.removeItem(STORAGE_USER_KEY);
-    router.replace("/"); // volta pra inicial
+    try {
+      await apiRequest('GET', {}, 'api/users/exit');
+      await AsyncStorage.clear();
+      Alert.alert('Sucesso', 'Você se desconectou da sua conta');
+      router.replace('/');
+    } catch (error) {
+      console.error('Erro ao sair:', error);
+      Alert.alert('Erro', 'Não foi possível sair da conta. Tente novamente.');
+    }
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Carregando informações do usuário...</Text>
+      </View>
+    );
+  }
+
+  console.log('Rendering with user:', user);
 
   return (
     <View style={styles.container}>
@@ -77,7 +163,7 @@ export default function PerfilVendedor() {
             </View>
 
             <View style={styles.nameAndRating}>
-              <Text style={styles.userName}>{user?.nome ?? "Usuário"}</Text>
+              <Text style={styles.userName}>{user?.nome ?? "Usuária"}</Text>
 
               <View style={styles.ratingRow}>
                 {Array.from({ length: 5 }).map((_, i) => {
@@ -95,7 +181,7 @@ export default function PerfilVendedor() {
                 <Text style={styles.ratingText}>{rating.toFixed(1)} / 5</Text>
               </View>
 
-              <Text style={styles.productCountText}>{productsCount} produtos anunciados</Text>
+              {/* <Text style={styles.productCountText}>{productsCount} produtos anunciados</Text> */}
             </View>
           </View>
 

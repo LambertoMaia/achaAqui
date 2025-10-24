@@ -19,7 +19,7 @@ import {
   View,
 } from "react-native";
 import { TextInput } from "react-native-paper";
-
+import apiRequest from "./services/apiService";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // chaves
@@ -32,6 +32,8 @@ type Product = {
   name: string;
   category: string;
   price: string;
+  description?: string;
+  store?: string;
 };
 
 const CARD_MARGIN = 8;
@@ -257,6 +259,17 @@ export default function Produtos() {
           <Text numberOfLines={1} style={styles.cardCategory}>
             {item.category}
           </Text>
+
+          {item.store && (
+            <View style={styles.storeInfo}>
+              <View style={styles.storeLogoContainer}>
+                <Text style={styles.storeLogoText}>{item.store.charAt(0)}</Text>
+              </View>
+              <Text numberOfLines={1} style={styles.storeName}>
+                {item.store}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -345,11 +358,11 @@ export default function Produtos() {
               style={styles.menuItem}
               onPress={() => {
                 closeMenu();
-                router.push("/favoritos");
+                router.push("/home");
               }}
             >
               <MaterialCommunityIcons name="heart" size={34} />
-              <Text style={styles.menuItemText}>Favoritos</Text>
+              <Text style={styles.menuItemText}>Favoritos (WIP)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -361,6 +374,25 @@ export default function Produtos() {
             >
               <MaterialCommunityIcons name="bullhorn" size={34} />
               <Text style={styles.menuItemText}>Anuncie Aqui</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, { borderBottomWidth: 0 }]}
+              onPress={async () => {
+                closeMenu();
+                try {
+                  await apiRequest('GET', {}, 'api/users/exit');
+                  await AsyncStorage.clear();
+                  Alert.alert('Sucesso', 'Você se desconectou da sua conta');
+                  router.replace('/');
+                } catch (error) {
+                  console.error('Erro ao sair:', error);
+                  Alert.alert('Erro', 'Não foi possível sair da conta. Tente novamente.');
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="exit-to-app" size={34} color="#ff4444" />
+              <Text style={[styles.menuItemText, { color: '#ff4444' }]}>Sair</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -399,7 +431,31 @@ const styles = StyleSheet.create({
   cardTextWrap: { padding: 8, minHeight: 80 },
   cardName: { fontSize: 14, fontWeight: "700", color: "#222", marginBottom: 6 },
   cardPrice: { fontSize: 14, fontWeight: "800", color: "#EA3F24", marginBottom: 6 },
-  cardCategory: { fontSize: 12, color: "#666" },
+  cardCategory: { fontSize: 12, color: "#666", marginBottom: 6 },
+  storeInfo: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    marginTop: 4 
+  },
+  storeLogoContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#EA3F24",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 6,
+  },
+  storeLogoText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  storeName: {
+    fontSize: 11,
+    color: "#666",
+    flex: 1,
+  },
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
   sideMenu: { position: "absolute", right: 0, top: 0, height: "100%", width: SCREEN_WIDTH * 0.7, backgroundColor: "#fff", borderLeftWidth: 1, borderLeftColor: "#e6e6e6", paddingTop: 40, paddingHorizontal: 16, paddingBottom: 20 },
   menuHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },

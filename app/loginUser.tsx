@@ -4,22 +4,35 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import IconeBuscar from "./assets/icons/Vector.png";
+import apiRequest from "./services/apiService";
 import { cadastroStyles } from "./styles/cadastro";
-
-import { login } from "./services/authService"; // ajuste o caminho se necessário
-
+//import { login } from "./services/authService"; // ajuste o caminho se necessário
 export default function LoginUser() {
   const router = useRouter();
+
+  // Redirect
+  const redir = async () => {
+    const resp = await apiRequest("GET", {}, "api/users/last")
+
+    if(resp.data.success) {
+      console.log("🏠 Redirecting to home");
+      console.log(resp)
+      router.replace("/home")
+      return
+    }
+  }
+
+  redir()
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -42,19 +55,40 @@ export default function LoginUser() {
     if (!canSubmit) return;
 
     setLoading(true);
-    try {
+    
+    const loginOperation = async () => {
+      try {
       // tenta login via authService (backend primeiro, fallback local se configurado)
-      const resp = await login({ email: email.trim().toLowerCase(), senha });
-      // resp contém { token, user }
-      Alert.alert("Login bem-sucedido", `Bem-vindo(a), ${resp.user.nome ?? "usuário"}!`, [
+      const response = await apiRequest("POST", { email: email.trim().toLowerCase(), senha }, "api/users/login");
+
+      console.log(response);
+      if (!response.success) {
+        Alert.alert("Error ao autenticar", response.data.message);
+        setLoading(false);
+        return;
+      }
+
+      Alert.alert("Login bem-sucedido", `Bem Vindo de Volta!`, [
         { text: "OK", onPress: () => router.replace("/home") },
       ]);
-    } catch (err: any) {
-      console.warn("login error:", err);
-      Alert.alert("Erro ao autenticar", String(err.message ?? err));
-    } finally {
-      setLoading(false);
+
+      //   // resp contém { token, user }
+      //   Alert.alert("Login bem-sucedido", `Bem Vindo(a)!`, [
+      //     { text: "OK", onPress: () => router.replace("/home") },
+      //   ]);
+      // } catch (err: any) {
+      //   console.warn("login error:", err);
+      //   Alert.alert("Erro ao autenticar", String(err.message ?? err));
+      // } finally {
+      //   setLoading(false);
+      } catch (err: any) {
+        console.warn("login error:", err);
+        Alert.alert("Erro ao autenticar", String(err.message ?? err));
+      } finally {
+        setLoading(false);
+      }
     }
+    loginOperation();
   };
 
   return (
